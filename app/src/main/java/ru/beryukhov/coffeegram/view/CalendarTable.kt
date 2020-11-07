@@ -23,14 +23,16 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.navigate
 import androidx.ui.tooling.preview.Preview
 import org.threeten.bp.DayOfWeek
+import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.TextStyle
+import ru.beryukhov.coffeegram.COFFEELIST_PAGE
 import ru.beryukhov.coffeegram.R
 import ru.beryukhov.coffeegram.app_ui.CoffeegramTheme
-import ru.beryukhov.coffeegram.model.NavigationIntent
-import ru.beryukhov.coffeegram.model.NavigationStore
 import ru.beryukhov.coffeegram.times
 import java.text.DateFormatSymbols
 import java.util.*
@@ -38,23 +40,19 @@ import java.util.*
 data class DayItem(
     val day: String,
     @DrawableRes val iconId: Int? = null,
-    val dayOfMonth: Int? = null
+    val dayOfMonth: LocalDate? = null
 )
 
 @Composable
 fun DayCell(
     dayItem: DayItem,
     modifier: Modifier = Modifier,
-    navigationStore: NavigationStore
+    navController: NavController
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier =
     if (dayItem.dayOfMonth == null) modifier else
         modifier.clickable(onClick = {
-            navigationStore.newIntent(
-                NavigationIntent.OpenCoffeeListPage(
-                    dayItem.dayOfMonth
-                )
-            )
+            navController.navigate("$COFFEELIST_PAGE/${dayItem.dayOfMonth.toEpochDay()}")
         })
     ) {
         with(dayItem) {
@@ -85,7 +83,7 @@ fun DayCell(
 }
 
 @Composable
-fun WeekRow(dayItems: List<DayItem?>, navigationStore: NavigationStore) {
+fun WeekRow(dayItems: List<DayItem?>, navController: NavController) {
     val weekDaysItems = dayItems.toMutableList()
     weekDaysItems.addAll(listOf(DayItem("")) * (7 - weekDaysItems.size))
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -94,7 +92,7 @@ fun WeekRow(dayItems: List<DayItem?>, navigationStore: NavigationStore) {
                 DayCell(
                     dayItem = dayItem
                         ?: DayItem(""),
-                    navigationStore = navigationStore,
+                    navController = navController,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -107,28 +105,28 @@ fun WeekRow(dayItems: List<DayItem?>, navigationStore: NavigationStore) {
 @Composable
 fun MonthTableAdjusted(
     weekItems: List<List<DayItem?>>,
-    navigationStore: NavigationStore,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
-        weekItems.map { WeekRow(dayItems = it, navigationStore = navigationStore) }
+        weekItems.map { WeekRow(dayItems = it, navController = navController) }
     }
 }
 
 data class WeekDayVectorPair(
-    val day: Int,
+    val day: LocalDate,
     val weekDay: DayOfWeek,
     @DrawableRes var iconId: Int? = null
 ) {
     fun toDayItem(): DayItem =
-        DayItem("$day", iconId, day)
+        DayItem(day.dayOfMonth.toString(), iconId, day)
 }
 
 @Composable
 fun MonthTable(
     yearMonth: YearMonth,
     filledDayItemsMap: Map<Int, Int?>,
-    navigationStore: NavigationStore,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     val weekDays: List<DayItem> = getWeekDaysNames(
@@ -143,7 +141,7 @@ fun MonthTable(
             { it },
             {
                 WeekDayVectorPair(
-                    it,
+                    yearMonth.atDay(it),
                     yearMonth.atDay(it).dayOfWeek
                 )
             })
@@ -173,7 +171,7 @@ fun MonthTable(
     weekItems.addAll(secondToSixWeeks)
     return MonthTableAdjusted(
         weekItems,
-        navigationStore,
+        navController,
         modifier = modifier
     )
 }
@@ -207,7 +205,7 @@ fun SampleTable(modifier: Modifier = Modifier) =
         YearMonth.of(2020, 7),
         mapOf(2 to R.drawable.coffee),
         modifier = modifier,
-        navigationStore = NavigationStore()
+        navController = NavController(ContextAmbient.current)
     )
 
 

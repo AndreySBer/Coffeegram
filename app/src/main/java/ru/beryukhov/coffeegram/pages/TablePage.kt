@@ -24,20 +24,22 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.navigate
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.TextStyle
+import ru.beryukhov.coffeegram.TABLE_PAGE
 import ru.beryukhov.coffeegram.data.DayCoffee
 import ru.beryukhov.coffeegram.model.DaysCoffeesStore
-import ru.beryukhov.coffeegram.model.NavigationIntent
-import ru.beryukhov.coffeegram.model.NavigationStore
+import ru.beryukhov.coffeegram.toInt
 import ru.beryukhov.coffeegram.view.MonthTable
 
 
 @Composable
 fun TableAppBar(
     yearMonth: YearMonth,
-    navigationStore: NavigationStore
+    navController: NavController
 ) {
     TopAppBar(title = {
         Row(horizontalArrangement = Arrangement.Center) {
@@ -56,14 +58,14 @@ fun TableAppBar(
     },
         navigationIcon = {
             IconButton(
-                onClick = { navigationStore.newIntent(NavigationIntent.PreviousMonth) },
+                onClick = { navController.navigate("$TABLE_PAGE/${yearMonth.minusMonths(1).toInt()}")},
                 modifier = Modifier.semantics {
                     accessibilityLabel = "ArrowLeft"
                 }) { Icon(Icons.Default.KeyboardArrowLeft) }
         },
         actions = {
             IconButton(
-                onClick = { navigationStore.newIntent(NavigationIntent.NextMonth) },
+                onClick = { navController.navigate("$TABLE_PAGE/${yearMonth.plusMonths(1).toInt()}")},
                 modifier = Modifier.semantics {
                     testTag = "ArrowRight"
                 }) { Icon(Icons.Default.KeyboardArrowRight) }
@@ -75,7 +77,7 @@ fun TableAppBar(
 fun TablePage(
     yearMonth: YearMonth,
     daysCoffeesStore: DaysCoffeesStore,
-    navigationStore: NavigationStore
+    navController: NavController
 ) {
     val coffeesState by daysCoffeesStore.state.collectAsState()
 
@@ -85,7 +87,7 @@ fun TablePage(
             coffeesState.coffees.filter { entry: Map.Entry<LocalDate, DayCoffee> -> entry.key.year == yearMonth.year && entry.key.month == yearMonth.month }
                 .mapKeys { entry: Map.Entry<LocalDate, DayCoffee> -> entry.key.dayOfMonth }
                 .mapValues { entry: Map.Entry<Int, DayCoffee> -> entry.value.getIconId() },
-            navigationStore,
+            navController,
             modifier = Modifier.weight(1f)
         )
         Text("${yearMonth.year}", modifier = Modifier.padding(16.dp))

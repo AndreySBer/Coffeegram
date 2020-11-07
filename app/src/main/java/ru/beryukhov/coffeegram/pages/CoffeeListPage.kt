@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.ui.tooling.preview.Preview
 import org.threeten.bp.LocalDate
 import ru.beryukhov.coffeegram.data.DayCoffee
@@ -20,10 +21,10 @@ import ru.beryukhov.coffeegram.view.CoffeeTypeItem
 
 
 @Composable
-fun CoffeeListAppBar(navigationStore: NavigationStore){
+fun CoffeeListAppBar(navController: NavController){
     TopAppBar(title = { Text("Add drink") },
         navigationIcon = {
-            IconButton(onClick = { navigationStore.newIntent(NavigationIntent.ReturnToTablePage) }) {
+            IconButton(onClick = { navController.navigateUp() }) {
                 Icon(
                     Icons.Default.ArrowBack
                 )
@@ -33,9 +34,9 @@ fun CoffeeListAppBar(navigationStore: NavigationStore){
 }
 
 @Composable
-fun CoffeeListPage(daysCoffeesStore: DaysCoffeesStore, navigationStore: NavigationStore) {
+fun CoffeeListPage(daysCoffeesStore: DaysCoffeesStore, date: LocalDate) {
     CoffeeList(
-        (navigationStore.state.value as NavigationState.CoffeeListPage).date,
+        date,
         daysCoffeesStore
     )
 }

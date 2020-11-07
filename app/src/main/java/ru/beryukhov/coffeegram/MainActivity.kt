@@ -1,6 +1,7 @@
 package ru.beryukhov.coffeegram
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.transition
 import androidx.compose.foundation.layout.*
@@ -12,13 +13,20 @@ import androidx.compose.ui.draw.drawOpacity
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.navArgument
+import androidx.navigation.compose.rememberNavController
 import androidx.ui.tooling.preview.Preview
+import org.threeten.bp.LocalDate
 import ru.beryukhov.coffeegram.animations.*
 import ru.beryukhov.coffeegram.app_ui.CoffeegramTheme
 import ru.beryukhov.coffeegram.model.DaysCoffeesStore
-import ru.beryukhov.coffeegram.model.NavigationState
-import ru.beryukhov.coffeegram.model.NavigationStore
 import ru.beryukhov.coffeegram.pages.*
+
+import org.threeten.bp.YearMonth
+
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,7 +42,7 @@ class MainActivity : AppCompatActivity() {
                 PagesContent(
                     modifier = Modifier.drawOpacity(transition[contentAlphaKey]),
                     topPadding = transition[contentTopPaddingKey],
-                    NavigationStore(), DaysCoffeesStore()
+                    daysCoffeesStore = DaysCoffeesStore()
                 )
             }
         }
@@ -44,43 +52,70 @@ class MainActivity : AppCompatActivity() {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    PagesContent(navigationStore = NavigationStore(), daysCoffeesStore = DaysCoffeesStore())
+    PagesContent(daysCoffeesStore = DaysCoffeesStore())
 }
 
 @Composable
 fun PagesContent(
     modifier: Modifier = Modifier,
     topPadding: Dp = 0.dp,
-    navigationStore: NavigationStore,
     daysCoffeesStore: DaysCoffeesStore
 ) {
-    val navigationState: NavigationState by navigationStore.state.collectAsState()
+    val navController = rememberNavController()
+
     CoffeegramTheme {
-        Scaffold(
-            modifier, topBar = {
-                when (navigationState) {
-                    is NavigationState.TablePage -> TableAppBar(
-                        navigationState.yearMonth,
-                        navigationStore
+        NavHost(navController, startDestination = "$TABLE_PAGE/{$YEAR_MONTH_PARAM}") {
+            composable("$TABLE_PAGE/{$YEAR_MONTH_PARAM}",
+                arguments = listOf(navArgument(YEAR_MONTH_PARAM) { type = NavType.IntType })
+            ) { backStackEntry ->
+                val yearMonth = backStackEntry.arguments!!.getInt(YEAR_MONTH_PARAM).let {
+                    Log.d("NAV_T", "it$it")
+                    if (it%12 == 0) YearMonth.now()
+                    else it.toYearMonth()
+                }//?:YearMonth.now()
+                Log.d("NAV_T", yearMonth.toString())
+                MyScaffold(modifier = modifier, topPadding = topPadding, topBar = {TableAppBar(
+                    yearMonth,
+                    navController
+                )}) {
+                    TablePage(
+                        yearMonth,
+                        daysCoffeesStore,
+                        navController
                     )
-                    is NavigationState.CoffeeListPage -> CoffeeListAppBar(navigationStore)
                 }
             }
-        ) {
-            Column {
-                Spacer(Modifier.padding(top = topPadding).align(Alignment.CenterHorizontally))
-                when (navigationState) {
-                    is NavigationState.TablePage -> TablePage(
-                        navigationState.yearMonth,
+            composable("$COFFEELIST_PAGE/{$DAY_OF_MONTH_PARAM}") {backStackEntry ->
+                val localDate = LocalDate.ofEpochDay(
+                    backStackEntry.arguments!!.getString(
+                        DAY_OF_MONTH_PARAM
+                    )!!.toLong()
+                )
+                Log.d("NAV_C", localDate.toString())
+                MyScaffold(modifier = modifier, topPadding = topPadding, topBar =
+                {CoffeeListAppBar(navController)})
+                {
+                    CoffeeListPage(
                         daysCoffeesStore,
-                        navigationStore
-                    )
-                    is NavigationState.CoffeeListPage -> CoffeeListPage(
-                        daysCoffeesStore,
-                        navigationStore
+                        localDate
                     )
                 }
             }
         }
     }
 }
+
+@Composable
+fun MyScaffold(modifier: Modifier = Modifier, topPadding: Dp = 0.dp, topBar: @Composable () -> Unit = emptyContent(), bodyContent: @Composable () -> Unit){
+    Scaffold(
+        modifier = modifier, topBar = topBar
+    ){
+        Column {
+            Spacer(Modifier.padding(top = topPadding).align(Alignment.CenterHorizontally))
+            bodyContent()
+        }
+    }
+}
+
+fun Int.toYearMonth(): YearMonth = YearMonth.of((this-1) / 12, (this-1) % 12)
+fun YearMonth.toInt(): Int = this.year * 12 + this.monthValue
